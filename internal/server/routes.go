@@ -15,7 +15,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	
-	r.Route("/users", func(r chi.Router) {
+	r.Route("/user", func(r chi.Router) {
 		r.Post("/register", handler.RegisterUserHandler)
 		r.Post("/get-token", handler.GenerateUserTokenHandler)
 	})
@@ -28,6 +28,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 			r.Get("/", s.HelloWorldHandler)
 			
 			r.Get("/health", s.healthHandler)
+			
+			r.Route("/shorten", func(r chi.Router) {
+				r.Get("/{shortCode}", handler.GetShortenUrlByShortCodeHandler)
+				r.Get("/{shortCode}/stats", handler.GetShortenUrlStatsByShortCodeHandler)
+				r.Post("/", handler.CreateShortenUrlHandler)
+				r.Put("/{shortCode}", handler.UpdateShortenUrlHandler)
+				r.Delete("/{shortCode}", handler.DeleteShortenUrlByShortCodeHandler)
+			})
 		})
 	})
 	return r
