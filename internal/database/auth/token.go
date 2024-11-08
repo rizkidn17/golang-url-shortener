@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"golang-url-shortener/internal/database"
+	"golang-url-shortener/internal/database/model"
 	"log"
 	"os"
 	"time"
@@ -11,7 +13,6 @@ import (
 var secretKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateToken(username string, email string) (string, error) {
-	// Create a new JWT token with claims
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"usr": username,                           // Subject (user identifier)
 		"eml": email,                              // User email
@@ -25,32 +26,61 @@ func GenerateToken(username string, email string) (string, error) {
 		return "", err
 	}
 	
-	// Print information about the created token
 	log.Printf("Token claims added: %+v\n", claims)
 	return tokenString, nil
 }
 
-func ValidateToken(signedToken string) error {
-	// Parse the token
+func ParseAndValidateToken(signedToken string) (*jwt.Token, jwt.MapClaims, error) {
 	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 	
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return errors.New("invalid token or claims")
+		return nil, nil, errors.New("invalid token or claims")
 	}
 	
 	if exp, ok := claims["exp"].(float64); ok {
 		if time.Unix(int64(exp), 0).Before(time.Now()) {
-			return errors.New("token has expired")
+			return nil, nil, errors.New("token has expired")
 		}
 	}
 	
-	// Print information about the parsed token
-	log.Printf("Token claims: %+v\n", token.Claims)
+	return token, claims, nil
+}
+
+func ValidateToken(signedToken string) error {
+	_, _, err := ParseAndValidateToken(signedToken)
+	if err != nil {
+		return err
+	}
+	
+	log.Printf("Token validated successfully.")
 	return nil
+}
+
+func GetUserIdFromToken(signedToken string) (uint, error) {
+	_, claims, err := ParseAndValidateToken(signedToken)
+	if err != nil {
+		return 0, err
+	}
+	
+	usr, ok := claims["usr"].(string)
+	if !ok {
+		return 0, errors.New("username not found in token")
+	}
+	
+	var user model.Users
+	dbService := database.New()
+	db := dbService.ToGormDB()
+	
+	if err := db.Where("username = ?", usr).First(&user).Error; err != nil {
+		return 0, err
+	}
+	
+	return user.ID, nil
 }
