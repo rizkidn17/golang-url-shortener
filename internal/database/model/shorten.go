@@ -24,12 +24,10 @@ type Shortens struct {
 	Url       string `json:"url"`
 	ShortCode string `json:"short_code" gorm:"unique"`
 	UserId    uint   `json:"user_id"`
-	User      Users  `json:"user" gorm:"foreignKey:UserId;references:ID"`
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 }
 
-// generateRandomString generates a random string of specified length.
 func (shorten *Shortens) GenerateShortCode() error {
 	result := make([]byte, shortCodeLength)
 	for i := range result {
