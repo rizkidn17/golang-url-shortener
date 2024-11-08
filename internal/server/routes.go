@@ -2,9 +2,11 @@ package server
 
 import (
 	"encoding/json"
+	"golang-url-shortener/internal/database/handler"
+	customMiddleware "golang-url-shortener/internal/middleware"
 	"log"
 	"net/http"
-
+	
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -12,23 +14,34 @@ import (
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-
-	r.Get("/", s.HelloWorldHandler)
-
-	r.Get("/health", s.healthHandler)
-
+	
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/register", handler.RegisterUserHandler)
+		r.Post("/get-token", handler.GenerateUserTokenHandler)
+	})
+	
+	//grouping routes
+	r.Route("/api", func(r chi.Router) {
+		r.Use(customMiddleware.AuthorizationHandler)
+		r.Get("/", s.HelloWorldHandler)
+		r.Route("/v1", func(r chi.Router) {
+			r.Get("/", s.HelloWorldHandler)
+			
+			r.Get("/health", s.healthHandler)
+		})
+	})
 	return r
 }
 
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
-
+	
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
 		log.Fatalf("error handling JSON marshal. Err: %v", err)
 	}
-
+	
 	_, _ = w.Write(jsonResp)
 }
 
