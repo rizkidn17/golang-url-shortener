@@ -161,7 +161,7 @@ func (s *service) Query(query string, args ...interface{}) (*gorm.DB, error) {
 }
 
 func (s *service) Migrate() error {
-	err := s.db.AutoMigrate(&model.Users{})
+	err := s.db.AutoMigrate(&model.Users{}, &model.Shortens{})
 	if err != nil {
 		log.Println("Database migration failed:", err)
 		return err
